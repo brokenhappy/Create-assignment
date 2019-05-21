@@ -1,272 +1,289 @@
 <?php
-	/**
-	 * This class represents a valid numeric selection by the user 
-	 */
-	class NumericSelection {
-		private $operator;
-		private $value;
+    /**
+     * This file contains the QueryFilter class and its dependencies
+     *
+     * The content of this file makes it easier to let the user select a
+     * filter for a query.
+     *
+     * PHP version 7.2.10
+     *
+     * @author     Wout Werkman
+     * @see        https://www.WoutWerkman.com
+     */
 
-		/**
-		 * @return string: the MySQL operator to be used on $value
-		 */
-		function get_operator(): string {
-			return $this->operator;
-		}
+    /**
+     * This class represents a valid numeric selection by the user 
+     */
+    class NumericSelection 
+    {
+        private $_operator;
+        private $_value;
 
-		/**
-		 * @return int: The integer selected by the user
-		 */
-		function get_value(): int {
-			return $this->value;
-		}
+        /**
+         * @return string: the MySQL operator to be used on $value
+         */
+        function getOperator(): string {
+            return $this->_operator;
+        }
 
-		public function __construct(string $operator, int $value) {
-			$this->operator = $operator;
-			$this->value = $value;
-		}
-	}
+        /**
+         * @return int: The integer selected by the user
+         */
+        function getValue(): int {
+            return $this->_value;
+        }
 
-	/**
-	 * This class contains a result from generating the SQL
-	 */
-	class ValuesSQLPair {
-		private $sql;
-		private $values;
+        public function __construct(string $operator, int $value) {
+            $this->_operator = $operator;
+            $this->_value    = $value;
+        }
+    }
 
-		/**
-		 * @return string: The SQL to filter the dataset formatted like:
-		 *	WHERE <for each valid row>{ <column> <filter> AND }
-		 *	or "" if there is no valid selection
-		 */
-		function get_sql(): string {
-			return $this->sql;
-		}
+    /**
+     * This class contains a result from generating the SQL
+     */
+    class ValuesSQLPair {
+        private $_sql;
+        private $_values;
 
-		/**
-		 * @return array: The values selected by the user
-		 */
-		function get_values(): array {
-			return $this->values;
-		}
+        /**
+         * @return string: The SQL to filter the dataset formatted like:
+         *  WHERE <for each valid row>{ <column> <filter> AND }
+         *  or "" if there is no valid selection
+         */
+        function getSQL(): string {
+            return $this->_sql;
+        }
 
-		public function __construct(string $sql, array $values) {
-			$this->sql = $sql;
-			$this->values = $values;
-		}
-	}
+        /**
+         * @return array: The values selected by the user
+         */
+        function getValues(): array {
+            return $this->_values;
+        }
 
-	/**
-	 * This class generates filter html, reads and stores the values them from $_POST,
-	 * remembers all valid filters from user input and generates SQL from it
-	 */
-	class QueryFilter {
-		
-		private $prefix;
-		private $numeric_filters;
-		private $enumeration_filters;
-		private $text_filters;
+        public function __construct(string $sql, array $values) {
+            $this->_sql    = $sql;
+            $this->_values = $values;
+        }
+    }
 
-		/**
-		 * @var array $name_to_column_map: maps the filter names to the columns they filter
-		 */
-		private $name_to_column_map;
+    /**
+     * This class generates filter html, reads and stores the values them from $_POST,
+     * remembers all valid filters from user input and generates SQL from it
+     */
+    class QueryFilter {
+        
+        private $_prefix;
+        private $_numericFilters;
+        private $_enumerationFilters;
+        private $_textFilters;
 
-		/**
-		 * Constructs a QueryFilter instance and sets the prefix
-		 *
-		 * @param string $prefix The prefix for everything generated in this table
-		 */
-		public function __construct(string $prefix) {
-			$this->prefix = $prefix;
-			$this->numeric_filters = array();
-			$this->enumeration_filters = array();
-			$this->text_filters = array();
-			$this->name_to_column_map = array();
-		}
+        /**
+         * @var array $_nameToColumnMap: maps the filter names to the columns they filter
+         */
+        private $_nameToColumnMap;
 
-		/**
-		 * @var array $operators: contains the operators that can be selected for the numeric filter and the MySQL operators they represent.
-		 * Also prevents SQL injection
-		 */
-		private static $operators = array(
-			"Greater than" => '>',
-			"Greater/equal" => '>=',
-			"Equal" => '=',
-			"Smaller than" => '<',
-			"Smaller/equal" => '<='
-		);
+        /**
+         * Constructs a QueryFilter instance and sets the prefix
+         *
+         * @param string $prefix The prefix for everything generated in this table
+         */
+        public function __construct(string $prefix) {
+            $this->_prefix             = $prefix;
+            $this->_numericFilters     = array();
+            $this->_enumerationFilters = array();
+            $this->_textFilters        = array();
+            $this->_nameToColumnMap    = array();
+        }
 
-		/**
-		 * Generates a numeric filter for the user, 
-		 * sets the values from last input
-		 * and if the values are valid, add it to the $numeric_filters 
-		 *
-		 * @param string $name The unique name to be shown to the user and to be used in combination with the prefix in $_POST
-		 * @param string $column The column in the query that is filtered
-		 */
-		public function generate_numeric_filter(string $name, string $column) {
-			$this->name_to_column_map[$name] = $column;
-			// For displaying
-			$actual_name = $name;
-			// Replace spaces, so its compatible for $_POST
-			$name = str_replace(' ', '-', $name);
-			// First set the operator selection
-			$operator_name = $this->prefix . "operator_" . $name; //the name in $_POST
-			// The operator selected by the user
-			$selected_operator = (isset($_POST[$operator_name]) && $_POST[$operator_name] !== ""? $_POST[$operator_name] : null);
-			
-			// Create the select and adds all options for the operators
-			echo ucfirst($actual_name) . ': <select name="' . $operator_name . '">';
-			foreach (self::$operators as $operator_name => $_) // The key here actually is the name of the option
-				echo '<option value="' 
-					. $operator_name . '"' 												// The value
-					. ($operator_name == $selected_operator ? "selected" : "") . '>' 	// Either if it is selected
-					. $operator_name . "</option>";										// The text displayed
-			echo "</select>";
+        /**
+         * @var array $operators: contains the operators that can be selected for the numeric filter and the MySQL operators they represent.
+         * Also prevents SQL injection
+         */
+        private static $_operators = array(
+            "Greater than" => '>',
+            "Greater/equal" => '>=',
+            "Equal" => '=',
+            "Smaller than" => '<',
+            "Smaller/equal" => '<='
+        );
 
-			// Then set the numeric input
-			$selected_value = null;
-			if (isset($_POST[$this->prefix . $name]) && $_POST[$this->prefix . $name] !== "")
-				$selected_value = $_POST[$this->prefix . $name];
+        /**
+         * Generates a numeric filter for the user, 
+         * sets the values from last input
+         * and if the values are valid, add it to the $numericFilters 
+         *
+         * @param string $name The unique name to be shown to the user and to be used in combination with the prefix in $_POST
+         * @param string $column The column in the query that is filtered
+         */
+        public function generateNumericFilter(string $name, string $column) {
+            $this->_nameToColumnMap[$name] = $column;
+            // For displaying
+            $actualName       = $name;
+            // Replace spaces, so its compatible for $_POST
+            $name             = str_replace(' ', '-', $name);
+            // First set the operator selection
+            $operatorName     = $this->_prefix . "operator_" . $name; // The name in $_POST
+            // The operator selected by the user
+            $selectedOperator = (isset($_POST[$operatorName]) && $_POST[$operatorName] !== ""? $_POST[$operatorName] : null);
+            
+            // Create the select and adds all options for the operators
+            echo ucfirst($actualName) . ': <select name="' . $operatorName . '">';
+            foreach (self::$_operators as $operatorName => $_) // The key here actually is the name of the option
+                echo '<option value="' 
+                    . $operatorName . '"'                                               // The value
+                    . ($operatorName == $selectedOperator ? "selected" : "") . '>'  // Either if it is selected
+                    . $operatorName . "</option>";                                      // The text displayed
+            echo "</select>";
 
-			echo '<input type="number" '
-				. 'name="' . $this->prefix . $name . '" '
-				. 'placeholder="' . ucfirst($name) . '"' 
-				. ($selected_value !== null?' value="' . $selected_value : "") . '"><br>';
+            // Then set the numeric input
+            $selectedValue = null;
+            if (isset($_POST[$this->_prefix . $name]) && $_POST[$this->_prefix . $name] !== "")
+                $selectedValue = $_POST[$this->_prefix . $name];
 
-			// If the selection is valid, add it to the $numeric_filters
-			if ($selected_operator !== null && $selected_value !== null)
-				$this->numeric_filters[$actual_name] = new NumericSelection(self::$operators[$selected_operator], intval($selected_value));
-		}
+            echo '<input type="number" '
+                . 'name="' . $this->_prefix . $name . '" '
+                . 'placeholder="' . ucfirst($name) . '"' 
+                . ($selectedValue !== null?' value="' . $selectedValue : "") . '"><br>';
 
-		/**
-		 * @return array The selected filters of type (HashMap<string, NumericSelection>)
-		 * with keys being the column given and values being the valid numeric filters
-		 */
-		public function get_numeric_filter_values() : array {
-			return $this->numeric_filters;
-		}
+            // If the selection is valid, add it to the $numericFilters
+            if ($selectedOperator !== null && $selectedValue !== null)
+                $this->_numericFilters[$actualName] = new NumericSelection(self::$_operators[$selectedOperator], intval($selectedValue));
+        }
 
-		/**
-		 * Generates an enumeration input for the user
-		 * sets the values from last input
-		 * and if there was at least one selected value, add it to the $enumeration_filters 
-		 *
-		 * @param string $name The unique name to be shown to the user and to be used in combination with the prefix and each query result in $_POST
-		 * @param string $column The column in the query that is filtered
-		 * @param iterable $query_result The query result of which each row, the first result will be used
-		 */
-		public function generate_enumeration_filter(string $name, string $column, iterable $query_result) {
-			$this->name_to_column_map[$name] = $column;
-			// For displaying
-			$actual_name = $name;
-			// Replace spaces, so its compatible for $_POST
-			$name = str_replace(' ', '-', $name);
-			// To add to the $enumeration_filters map
-			$selected_checkboxes = array();
+        /**
+         * @return array The selected filters of type (HashMap<string, NumericSelection>)
+         * with keys being the column given and values being the valid numeric filters
+         */
+        public function getNumericFilterValues() : array {
+            return $this->_numericFilters;
+        }
 
-			?>
-				<div class="checkbox-group">
-					<?= ucfirst($actual_name) . ":"?><input class="select-all" type="checkbox"><br>
-					<table>
-			<?php
-			foreach($query_result as $row) {
-				// Replace spaces, so its compatible for $_POST
-				$enum_value = str_replace(" ", "-", $row[0]);
-				$fullName = $this->prefix . $name . "_" . $enum_value;
-				// Either if the filter is enabled for this color
-				$checked = isset($_POST[$fullName]) && $_POST[$fullName] === "on" ? "checked" : "";
-				if ($checked !== "")
-					$selected_checkboxes[] = $enum_value;
+        /**
+         * Generates an enumeration input for the user
+         * sets the values from last input
+         * and if there was at least one selected value, add it to the $enumerationFilters 
+         *
+         * @param string $name The unique name to be shown to the user and to be used in combination with the prefix and each query result in $_POST
+         * @param string $column The column in the query that is filtered
+         * @param iterable $queryResult The query result of which each row, the first result will be used
+         */
+        public function generateEnumerationFilter(string $name, string $column, iterable $queryResult) {
+            $this->_nameToColumnMap[$name] = $column;
+            // For displaying
+            $actualName         = $name;
+            // Replace spaces, so its compatible for $_POST
+            $name               = str_replace(' ', '-', $name);
+            // To add to the $enumerationFilters map
+            $selectedCheckboxes = array();
 
-				// Add the user input element
-				echo '<tr><td>-'.ucfirst($enum_value).'</td><td><input type="checkbox" name="'.$fullName.'" '.$checked.'></td></tr>';
-			}
-			echo "</table></div>";
-			if (count($selected_checkboxes) > 0)
-				$this->enumeration_filters[$actual_name] = $selected_checkboxes;
-		}
+            ?>
+                <div class="checkbox-group">
+                    <?= ucfirst($actualName) . ":"?><input class="select-all" type="checkbox"><br>
+                    <table>
+            <?php
+            foreach($queryResult as $row) {
+                // Replace spaces, so its compatible for $_POST
+                $enumValue = str_replace(" ", "-", $row[0]);
+                $fullName  = $this->_prefix . $name . "_" . $enumValue;
+                // Either if the filter is enabled for this color
+                $checked   = isset($_POST[$fullName]) && $_POST[$fullName] === "on" ? "checked" : "";
+                if ($checked !== "")
+                    $selectedCheckboxes[] = $enumValue;
 
-		/**
-		 * @return array The selected filters of type (HashMap<string, array<string>>)
-		 * with keys being the column given and values being the selected checkboxes
-		 * (only those with at least 1 selected value)
-		 */
-		public function get_enumeration_filter_values() : array {
-			return $this->enumeration_filters;
-		}
+                // Add the user input element
+                echo '<tr><td>-'.ucfirst($enumValue).'</td><td><input type="checkbox" name="'.$fullName.'" '.$checked.'></td></tr>';
+            }
+            echo "</table></div>";
+            if (count($selectedCheckboxes) > 0)
+                $this->_enumerationFilters[$actualName] = $selectedCheckboxes;
+        }
 
-		/**
-		 * Generates a text input for the user
-		 * sets the values from last input
-		 * if there was a not-empty input, add it to the $text_filters array
-		 *
-		 * @param string $name The unique name to be shown to the user and to be used in combination with the prefix in $_POST
-		 */
-		public function generate_text_filter(string $name, string $column) {
-			$this->name_to_column_map[$name] = $column;
-			// For displaying
-			$actual_name = $name;
-			// Replace spaces, so its compatible for $_POST
-			$name = str_replace(' ', '-', $name);
-			$value = (isset($_POST[$name]) ? $_POST[$name] : "");
-			echo ucfirst($name) . ': <input type="text" '
-				. ' name="' . $name . '"'
-				. ' placeholder="' . ucfirst($name) . '"'
-				. ' value="' . $value . '"><br>';
-			if ($value !== "")
-				$this->text_filters[$actual_name] = $value;
-		}
+        /**
+         * @return array The selected filters of type (HashMap<string, array<string>>)
+         * with keys being the column given and values being the selected checkboxes
+         * (only those with at least 1 selected value)
+         */
+        public function getEnumerationFilterValues() : array {
+            return $this->_enumerationFilters;
+        }
 
-		/**
-		 * @return array The text filters in which the user has inserted data
-		 * type HashMap<string, string> with key being the column given and the values being the inserted text
-		 */
-		public function get_text_filter_values() : array {
-			return $this->text_filters;
-		}
+        /**
+         * Generates a text input for the user
+         * sets the values from last input
+         * if there was a not-empty input, add it to the $textFilters array
+         *
+         * @param string $name The unique name to be shown to the user and to be used in combination with the prefix in $_POST
+         */
+        public function generateTextFilter(string $name, string $column) {
+            $this->_nameToColumnMap[$name] = $column;
+            // For displaying
+            $actualName = $name;
+            // Replace spaces, so its compatible for $_POST
+            $name = str_replace(' ', '-', $name);
+            $value = (isset($_POST[$name]) ? $_POST[$name] : "");
+            echo ucfirst($name) . ': <input type="text" '
+                . ' name="' . $name . '"'
+                . ' placeholder="' . ucfirst($name) . '"'
+                . ' value="' . $value . '"><br>';
+            if ($value !== "")
+                $this->_textFilters[$actualName] = $value;
+        }
 
-		public function get_filter_sql() : ValuesSQLPair {
-			// The array with parameters of which each value will match with a ?
-			$parameters = array();
-			// Contains parts of the SQL for filtering
-			$filters = array();
+        /**
+         * @return array The text filters in which the user has inserted data
+         * type HashMap<string, string> with key being the column given and the values being the inserted text
+         */
+        public function getTextFilterValues() : array {
+            return $this->_textFilters;
+        }
 
-			// The order is VERY important for performance
-			//ordered on time effeciency (numeric comparison is quickest, then IN() and then LIKE %bla%)
+        public function getFilterSQL() : ValuesSQLPair {
+            // The array with parameters of which each value will match with a ?
+            $parameters = array();
+            // Contains parts of the SQL for filtering
+            $filters = array();
 
-			// Sets the numerical filters (Starts first because its the lightest comparison)
-			foreach ($this->get_numeric_filter_values() as $name => $ns) {
-				// Format: <column> <operator> <value> example: "height > 150"
-				$filters[] = $this->name_to_column_map[$name] . " " . $ns->get_operator() . " ?";
-				// Add the value to match the ?
-				$parameters[] = $ns->get_value();
-			}
+            // The order is VERY important for performance
+            // Ordered on time effeciency (numeric comparison is quickest, then IN() and then LIKE %bla%)
 
-			// Sets the enumeration filters
-			foreach ($this->get_enumeration_filter_values() as $name => $selected_values) {
-				// Format: <column> IN(<values>) example g.gender IN('female', 'n/a')
-				$filters[] = $this->name_to_column_map[$name] . " IN(" . implode(",", array_fill(0, count($selected_values), "?")) . ")";
-				// Add the values to match the ?s
-				$parameters = array_merge($parameters, $selected_values);
-			}
+            // Sets the numerical filters (Starts first because its the lightest comparison)
+            foreach ($this->getNumericFilterValues() as $name => $ns) {
+                // Format: <column> <operator> <value> example: "height > 150"
+                $filters[] = $this->_nameToColumnMap[$name] . " " . $ns->getOperator() . " ?";
+                // Add the value to match the ?
+                $parameters[] = $ns->getValue();
+            }
 
-			// Sets the text filters
-			foreach ($this->get_text_filter_values() as $name => $text) {
-				// Format: <column> LIKE <value> example: name LIKE %luke%
-				$filters[] = $this->name_to_column_map[$name] . " LIKE ?";
-				// Escape existing % and add %s for searching
-				$text = "%" . str_replace("%", "\\%", $text) . "%";
-				// Add the text to match the ?
-				$parameters[] = $text;
-			}
+            // Sets the enumeration filters
+            foreach ($this->getEnumerationFilterValues() as $name => $selectedValues) {
+                // Format: <column> IN(<values>) example g.gender IN('female', 'n/a')
+                $filters[] = 
+                    $this->_nameToColumnMap[$name]
+                    . " IN(" 
+                        . implode(",", array_fill(0, count($selectedValues), "?")) 
+                    . ")";
+                // Add the values to match the ?s
+                $parameters = array_merge($parameters, $selectedValues);
+            }
 
-			// Return the filter SQL and parameters
-			if (count($filters) === 0)
-				return new ValuesSQLPair("", array());
-			return new ValuesSQLPair("WHERE " . implode(" AND ", $filters) . " ", $parameters);
+            // Sets the text filters
+            foreach ($this->getTextFilterValues() as $name => $text) {
+                // Format: <column> LIKE <value> example: name LIKE %luke%
+                $filters[] = $this->_nameToColumnMap[$name] . " LIKE ?";
+                // Escape existing % and add %s for searching
+                $text = "%" . str_replace("%", "\\%", $text) . "%";
+                // Add the text to match the ?
+                $parameters[] = $text;
+            }
 
-		}
-	}
+            // Return the filter SQL and parameters
+            if (count($filters) === 0)
+                return new ValuesSQLPair("", array());
+            return new ValuesSQLPair("WHERE " . implode(" AND ", $filters) . " ", $parameters);
+
+        }
+    }
 
 ?>
