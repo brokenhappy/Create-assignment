@@ -32,6 +32,7 @@
 		TRUNCATE `create_opdracht`.`ct_people_skin_color`;
 		TRUNCATE `create_opdracht`.`ct_species_hair_color`;
 		TRUNCATE `create_opdracht`.`ct_species_skin_color`;
+		TRUNCATE `create_opdracht`.`ct_species_eye_color`;
 		SET SQL_SAFE_UPDATES = 0;
 		DELETE FROM `create_opdracht`.`people` WHERE 1 = 1;
 		DELETE FROM `create_opdracht`.`species` WHERE 1 = 1;
@@ -42,10 +43,12 @@
 	foreach (download_swapi_list("people") as $index => $person) {
 		$ID = $index + 1;
 
-		//removing BBY from birth_date and parsing to int (too long for ternary statement)
-		$birth_year = 0;
+		//removing BBY from birth_date and parsing to int
+		$birth_year = null;
 		if ($person->birth_year != "unknown")
 			$birth_year = intval(substr($person->birth_year, 0, strlen($person->birth_year) - 3));
+		$mass = $person->mass == 0 ? null : $person->mass;
+		$height = $person->height == 0 ? null : $person->height;
 
 		//insert the person
 		$stmt = $PDO->prepare(
@@ -67,8 +70,8 @@
 		);
 		$stmt->bindParam(":ID", $ID, PDO::PARAM_INT);
 		$stmt->bindParam(":name", $person->name, PDO::PARAM_STR);
-		$stmt->bindParam(":height", $person->height, PDO::PARAM_INT);
-		$stmt->bindParam(":mass", $person->mass, PDO::PARAM_INT);
+		$stmt->bindParam(":height", $height, PDO::PARAM_INT);
+		$stmt->bindParam(":mass", $mass, PDO::PARAM_INT);
 		$stmt->bindParam(":birth_year", $birth_year, PDO::PARAM_INT);
 		$stmt->bindParam(":gender", $person->gender, PDO::PARAM_STR);
 		
@@ -87,7 +90,7 @@
 					(SELECT `key` FROM hair_color WHERE color = :hair_color)
 				);"
 			);
-			$stmt->bindParam(':personID', $ID, PDO::PARAM_STR);
+			$stmt->bindParam(':personID', $ID, PDO::PARAM_INT);
 			$stmt->bindParam(':hair_color', $hair_color, PDO::PARAM_STR);
 			$stmt->execute();
 		}
@@ -104,7 +107,7 @@
 					(SELECT `key` FROM skin_color WHERE color = :skin_color)
 				);"
 			);
-			$stmt->bindParam(':personID', $ID, PDO::PARAM_STR);
+			$stmt->bindParam(':personID', $ID, PDO::PARAM_INT);
 			$stmt->bindParam(':skin_color', $skin_color, PDO::PARAM_STR);
 			$stmt->execute();
 		}
@@ -112,6 +115,10 @@
 
 	foreach (download_swapi_list("species") as $index => $species) {
 		$ID = $index + 1;
+
+		$average_height = $species->average_height == 0 ? null : $species->average_height;
+		$average_lifespan = $species->average_lifespan == 0 ? null : $species->average_lifespan;
+
 		//insert the species
 		$stmt = $PDO->prepare(
 			"INSERT INTO `create_opdracht`.`species` (
@@ -136,8 +143,8 @@
 		$stmt->bindParam(":name", $species->name, PDO::PARAM_STR);
 		$stmt->bindParam(":classification", $species->classification, PDO::PARAM_STR);
 		$stmt->bindParam(":designation", $species->designation, PDO::PARAM_STR);
-		$stmt->bindParam(":average_height", $species->average_height, PDO::PARAM_STR);
-		$stmt->bindParam(":average_lifespan", $species->average_lifespan, PDO::PARAM_STR);
+		$stmt->bindParam(":average_height", $average_height, PDO::PARAM_INT);
+		$stmt->bindParam(":average_lifespan", $average_lifespan, PDO::PARAM_INT);
 		$stmt->bindParam(":language", $species->language, PDO::PARAM_STR);
 		
 		$stmt->execute();
@@ -155,7 +162,7 @@
 					(SELECT `key` FROM hair_color WHERE color = :hair_color)
 				);"
 			);
-			$stmt->bindParam(':speciesID', $ID, PDO::PARAM_STR);
+			$stmt->bindParam(':speciesID', $ID, PDO::PARAM_INT);
 			$stmt->bindParam(':hair_color', $hair_color, PDO::PARAM_STR);
 			$stmt->execute();
 		}
@@ -172,7 +179,7 @@
 					(SELECT `key` FROM skin_color WHERE color = :skin_color)
 				);"
 			);
-			$stmt->bindParam(':speciesID', $ID, PDO::PARAM_STR);
+			$stmt->bindParam(':speciesID', $ID, PDO::PARAM_INT);
 			$stmt->bindParam(':skin_color', $skin_color, PDO::PARAM_STR);
 			$stmt->execute();
 		}
@@ -188,7 +195,7 @@
 					(SELECT `key` FROM eye_color WHERE color = :eye_color)
 				);"
 			);
-			$stmt->bindParam(':speciesID', $ID, PDO::PARAM_STR);
+			$stmt->bindParam(':speciesID', $ID, PDO::PARAM_INT);
 			$stmt->bindParam(':eye_color', $eye_color, PDO::PARAM_STR);
 			$stmt->execute();
 		}

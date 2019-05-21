@@ -73,9 +73,9 @@
 						"SELECT 
 							ID, 
 							`name`, 
-							IF(height = 0, 'unknown', height), 
-							IF(mass = 0, 'unknown', mass), 
-							IF(birth_year = 0, 'unknown', birth_year), 
+							IF(height IS NULL, 'unknown', height), 
+							IF(mass IS NULL, 'unknown', mass), 
+							IF(birth_year IS NULL, 'unknown', birth_year), 
 							g.gender,
 							s.color,
 							h.color
@@ -140,8 +140,8 @@
 							ID,
 							`name`,
 							language,
-							IF(average_height = 0, 'unknown', average_height),
-							IF(average_lifespan = 0, 'unknown', average_lifespan),
+							IF(average_height IS NULL, 'unknown', average_height),
+							IF(average_lifespan IS NULL, 'unknown', average_lifespan),
 							d.designation,
 							c.classification,
 							sc.color,
