@@ -1,0 +1,6 @@
+{
+	"schema":"create_opdracht",
+	"host":"localhost",
+	"username":"root",
+	"password":""
+}
