@@ -42,7 +42,8 @@
     /**
      * This class contains a result from generating the SQL
      */
-    class ValuesSQLPair {
+    class ValuesSQLPair 
+    {
         private $_sql;
         private $_values;
 
@@ -72,7 +73,8 @@
      * This class generates filter html, reads and stores the values them from $_POST,
      * remembers all valid filters from user input and generates SQL from it
      */
-    class QueryFilter {
+    class QueryFilter 
+    {
         
         private $_prefix;
         private $_numericFilters;

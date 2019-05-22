@@ -1,4 +1,13 @@
 <?php
+    /**
+     * This file downloads all the required SWAPI data and inserts it into the database after truncating it
+     *
+     * PHP version 7.2.10
+     *
+     * @author     Wout Werkman
+     * @see        https://www.WoutWerkman.com
+     */
+
     include_once "db_connect.php";
 
     /**
@@ -13,8 +22,8 @@
         $count   = 0;
         $result  = array_fill(0, $content->count, null); // Instantiate array of content size
         while (true) {
-            foreach ($content->results as $content_result) // Iterate over every result from the content
-                $result[$count++] = $content_result; // Add the content to the result
+            foreach ($content->results as $contentResult) // Iterate over every result from the content
+                $result[$count++] = $contentResult; // Add the content to the result
 
             if (!isset($content->next))
                 return $result; // Return the results if there is no next page
@@ -42,8 +51,7 @@
     // Download all people and iterate over them
     foreach (downloadSwapiList("people") as $index => $person) {
         $ID        = $index + 1;
-        // Removing BBY from birthYear and parsing to int
-        $birthYear = null;
+        $birthYear = null; // Removing BBY from birthYear and parsing to int
         if ($person->birth_year != "unknown")
             $birthYear = intval(substr($person->birth_year, 0, strlen($person->birth_year) - 3));
         $mass      = $person->mass == 0 ? null : $person->mass;
