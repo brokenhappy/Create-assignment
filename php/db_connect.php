@@ -1,4 +1,13 @@
 <?php
+    /**
+     * This file handles downloading the database configuration and setting up a connection with MySQL
+     *
+     * PHP version 7.2.10
+     *
+     * @author     Wout Werkman
+     * @see        https://www.WoutWerkman.com
+     */
+
     function _DB_getSettings() {
         static $__settings = null;
         if ($__settings === null) // Downloads the data from the config if it was not loaded before
